@@ -12,4 +12,5 @@ public:
 	static const int B = 2;
 	static const int J = 2;
 	static const int F = 1;
+	static const int MAX_NO_FIGHTS = 100;
 };

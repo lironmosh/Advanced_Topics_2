@@ -111,14 +111,33 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="MyBoard.h" />
     <ClInclude Include="Board.h" />
     <ClInclude Include="Constants.h" />
-    <ClInclude Include="Game.h" />
+    <ClInclude Include="FightInfo.h" />
+    <ClInclude Include="GameManager.h" />
+    <ClInclude Include="JokerChange.h" />
+    <ClInclude Include="Move.h" />
+    <ClInclude Include="MyFightInfo.h" />
+    <ClInclude Include="MyFilePlayerAlgorithm.h" />
+    <ClInclude Include="MyJokerChange.h" />
+    <ClInclude Include="MyMove.h" />
+    <ClInclude Include="MyPiecePosition.h" />
+    <ClInclude Include="MyPoint.h" />
+    <ClInclude Include="PiecePosition.h" />
+    <ClInclude Include="PlayerAlgorithm.h" />
+    <ClInclude Include="Point.h" />
     <ClInclude Include="Soldier.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Board.cpp" />
-    <ClCompile Include="Game.cpp" />
+    <ClCompile Include="MyBoard.cpp" />
+    <ClCompile Include="GameManager.cpp" />
+    <ClCompile Include="MyFightInfo.cpp" />
+    <ClCompile Include="MyFilePlayerAlgorithm.cpp" />
+    <ClCompile Include="MyJokerChange.cpp" />
+    <ClCompile Include="MyMove.cpp" />
+    <ClCompile Include="MyPiecePosition.cpp" />
+    <ClCompile Include="MyPoint.cpp" />
     <ClCompile Include="Soldier.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
