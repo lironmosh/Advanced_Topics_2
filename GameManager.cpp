@@ -17,6 +17,17 @@ GameManager::GameManager() {
 int GameManager::parseInitStateForPlayer(int player, vector<unique_ptr<PiecePosition>>& piecePositions, vector<unique_ptr<FightInfo>>& fightInfos) {
 	int numOfSoldiers[6] = { 0 }; // R P S B J F
 
+	for (vector<unique_ptr<PiecePosition>>::size_type i = 0; i < piecePositions.size(); i++)
+	{
+		for (vector<unique_ptr<PiecePosition>>::size_type j = i + 1; j < piecePositions.size(); j++)
+		{
+			if (piecePositions.at(i).get()->getPosition().getX() == piecePositions.at(j).get()->getPosition().getX() &&
+				piecePositions.at(i).get()->getPosition().getY() == piecePositions.at(j).get()->getPosition().getY()) {
+				return j + 1;
+			}
+		}
+	}
+
 	for (vector<unique_ptr<PiecePosition>>::size_type i = 0; i < piecePositions.size() ; i++)
 	{
 		char rep = piecePositions.at(i).get()->getPiece();
@@ -56,7 +67,7 @@ int GameManager::parseInitStateForPlayer(int player, vector<unique_ptr<PiecePosi
 			numOfSoldiers[3] > Constants::B ||
 			numOfSoldiers[4] > Constants::J ||
 			numOfSoldiers[5] > Constants::F) {
-			return -1; // Too many players of some kind
+			return i+1; // Too many players of some kind
 		}
 
 		Soldier* soldier = new Soldier(type, player, isJoker);
@@ -65,7 +76,7 @@ int GameManager::parseInitStateForPlayer(int player, vector<unique_ptr<PiecePosi
 			if (fightInfo != nullptr) fightInfos.push_back(move(unique_ptr<FightInfo>(fightInfo)));
 		}
 		else {
-			return -1;
+			return i+1;
 		}
 	}
 
@@ -75,14 +86,14 @@ int GameManager::parseInitStateForPlayer(int player, vector<unique_ptr<PiecePosi
 		return 0; // parse succeed
 	}
 	else {
-		return -1; // number of flags is not correct
+		return piecePositions.size(); // number of flags is not correct
 	}
 			
 }
 
-void GameManager::startGame() {
-	PlayerAlgorithm* playerAlgorithm1 = new MyFilePlayerAlgorithm();
-	PlayerAlgorithm* playerAlgorithm2 = new MyFilePlayerAlgorithm();
+void GameManager::startGame(string player1config, string player2config ) {
+	PlayerAlgorithm* playerAlgorithm1 = player1config.compare("auto") == 0 ? (PlayerAlgorithm*) new MyFilePlayerAlgorithm() : (PlayerAlgorithm*) new MyFilePlayerAlgorithm();
+	PlayerAlgorithm* playerAlgorithm2 = player2config.compare("auto") == 0 ? (PlayerAlgorithm*) new MyFilePlayerAlgorithm() : (PlayerAlgorithm*) new MyFilePlayerAlgorithm();
 
 	vector<unique_ptr<PiecePosition>> player1piecePositions;
 	vector<unique_ptr<PiecePosition>> player2piecePositions;
@@ -100,13 +111,13 @@ void GameManager::startGame() {
 			return; // can't start game
 		}
 		else if (player1parseResponse != 0 && player2parseResponse != 0) {
-			endGame(0, "Bad Positioning for both players");
+			endGame(0, "Bad Positioning input file for both players - player 1: line " + to_string(player1parseResponse) + ", player 2: line " + to_string(player2parseResponse));
 		}
 		else if (player1parseResponse != 0) {
-			endGame(2, "Bad Positioning for player 1");
+			endGame(2, "Bad Positioning input file for player 1 - line " + to_string(player1parseResponse));
 		}
 		else {
-			endGame(1, "Bad Positioning for player 2");
+			endGame(1, "Bad Positioning input file for player 2 - line " + to_string(player2parseResponse));
 		}
 		
 	}
@@ -137,9 +148,11 @@ void GameManager::startGame() {
 			
 			int playerTurn = 1;
 			int noFightsCounter = 0;
+			int moveCounters[3] = { 0 };
 			
 			while (!isGameOver(playerTurn)) {
 				
+				moveCounters[playerTurn]++;
 				bool moveSucceed = true;
 
 				unique_ptr<Move> move(std::move(playerTurn == 1 ? playerAlgorithm1->getMove(): playerAlgorithm2->getMove()));
@@ -150,7 +163,7 @@ void GameManager::startGame() {
 				int to_x = move.get()->getTo().getX();
 				int to_y = move.get()->getTo().getY();
 
-				if (board->canMakeMove(from_x - 1, from_y - 1, to_x - 1, to_y - 1)) {
+				if (board->canMakeMove(from_x - 1, from_y - 1, to_x - 1, to_y - 1, playerTurn)) {
 					FightInfo* fightInfo = board->makeMove(from_x - 1, from_y - 1, to_x - 1, to_y - 1);
 					playerTurn == 1 ? playerAlgorithm2->notifyOnOpponentMove(*move) : playerAlgorithm1->notifyOnOpponentMove(*move);
 					if (fightInfo != nullptr) {
@@ -164,6 +177,8 @@ void GameManager::startGame() {
 							endGame(0, "There was no fight for " + to_string(Constants::MAX_NO_FIGHTS) + " moves");
 						}
 					}
+
+					if (isGameOver(playerTurn)) break;
 				}
 				else {
 					moveSucceed = false;
@@ -186,10 +201,10 @@ void GameManager::startGame() {
 				if (!moveSucceed) {
 					// move failed
 					if (playerTurn == 1) {
-						endGame(2, "Bad Move for player 1");
+						endGame(2, "Bad Moves input file for player 1 - line " + to_string(moveCounters[1]));
 					}
 					else {
-						endGame(1, "Bad Move for player 2");
+						endGame(1, "Bad Moves input file for player 2 - line " + to_string(moveCounters[2]));
 					}
 					break;
 				}
@@ -259,10 +274,13 @@ GameManager::~GameManager() {
 }
 
 
-int main()
+int main(int argc, char* argv[])
 {
+	string config = argv[1];
+	string player1config = config.substr(0, 4);
+	string player2config = config.substr(8, 4);
 	GameManager game;
-	game.startGame();
+	game.startGame(player1config, player2config);
 	return 0;
 }
 

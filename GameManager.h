@@ -5,6 +5,7 @@
 #include "MyBoard.h"
 #include "PlayerAlgorithm.h"
 #include "MyFilePlayerAlgorithm.h"
+#include "MyAutoPlayerAlgorithm.h"
 
 using namespace std;
 class GameManager
@@ -16,7 +17,7 @@ class GameManager
 
 public:
 	GameManager();
-	void startGame();
+	void startGame(string player1config, string player2config);
 	void endGame(int winner, string reason);
 	bool isGameOver(int opponent);
 	~GameManager();

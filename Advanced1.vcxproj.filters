@@ -95,5 +95,11 @@
     <ClCompile Include="Soldier.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MyAutoPlayerAlgorithm.h">
+      <Filter>Header Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MyAutoPlayerAlgorithm.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

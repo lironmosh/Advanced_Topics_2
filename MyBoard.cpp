@@ -12,6 +12,23 @@ MyBoard::MyBoard(){
 	}
 }
 
+MyBoard::MyBoard(const MyBoard & rhs)
+{
+	board = new Soldier**[Constants::N];
+	for (int i = 0; i < Constants::N; ++i) {
+		board[i] = new Soldier*[Constants::M];
+		for (int j = 0; j < Constants::M; ++j) {
+			if (rhs.board[i][j] != nullptr) {
+				board[i][j] = new Soldier(rhs.board[i][j]->getType(), rhs.board[i][j]->getPlayer(), rhs.board[i][j]->getJoker());
+			}
+			else {
+				board[i][j] = nullptr;
+			}
+			
+		}
+	}
+}
+
 int MyBoard::getPlayer(const Point & pos) const
 {
 	Soldier* piecePosition = board[pos.getX() - 1][pos.getY() - 1];
@@ -68,7 +85,7 @@ FightInfo* MyBoard::putSoldier(Soldier* solider, int x, int y) {
 	return new MyFightInfo(new MyPoint(x+1,y+1), player1piece, player2piece, winner);
 }
 
-bool MyBoard::canMakeMove(int x_start, int y_start, int x_end, int y_end) {
+bool MyBoard::canMakeMove(int x_start, int y_start, int x_end, int y_end, int player) {
 
 	if (x_start >= Constants::N || y_start >= Constants::M || x_start < 0 || y_start < 0) {
 		return false;
@@ -77,6 +94,8 @@ bool MyBoard::canMakeMove(int x_start, int y_start, int x_end, int y_end) {
 	} else if (abs(x_end - x_start) + abs(y_end - y_start) != 1) {
 		return false;
 	} else if (board[x_start][y_start] == nullptr) {
+		return false;
+	}else if (board[x_start][y_start]->getPlayer() != player) {
 		return false;
 	} else if (!board[x_start][y_start]->isMovable()) {
 		return false;
@@ -176,4 +195,196 @@ bool MyBoard::isPlayerHaveMoveableSoliders(int player) {
 	}
 	return false;
 }
+
+JokerChange* MyBoard::getBestJokerChange(int player) {
+	JokerChange* bestJokerChange = nullptr;
+	std::vector<Move*>* fightMoves = getAllFightMoves(player);
+	for (int i = 0; i < fightMoves->size(); ++i) {
+		Soldier* my = board[fightMoves->at(i)->getFrom().getX() - 1][fightMoves->at(i)->getFrom().getY() - 1];
+		Soldier* other = board[fightMoves->at(i)->getTo().getX() - 1][fightMoves->at(i)->getTo().getY() - 1];
+		if (my->getJoker()) {
+			if (other->getType() == 'R') {
+				bestJokerChange = (JokerChange*) new MyJokerChange(new MyPoint(fightMoves->at(i)->getFrom().getX(), fightMoves->at(i)->getFrom().getY()), 'P');
+			} else if (other->getType() == 'P') {
+				bestJokerChange = (JokerChange*) new MyJokerChange(new MyPoint(fightMoves->at(i)->getFrom().getX(), fightMoves->at(i)->getFrom().getY()), 'S');
+			} else if (other->getType() == 'S') {
+				bestJokerChange = (JokerChange*) new MyJokerChange(new MyPoint(fightMoves->at(i)->getFrom().getX(), fightMoves->at(i)->getFrom().getY()), 'R');
+			}
+		}
+	}
+
+	fightMoves->clear();
+
+	return bestJokerChange;
+}
+
+Move* MyBoard::getBestMove(int player) {
+	std::vector<Move*>* fightMoves = getAllFightMoves(player);
+	std::vector<Move*>* nonFightMoves = getAllNonFightMoves(player);
+	double* winProbabilites = getWinProbabilities(player);
+	Move* bestMove = nullptr;
+
+	if (fightMoves->size() > 0) {
+		double bestProb = -1;
+		for (int i = 0; i < fightMoves->size(); i++) {
+			Soldier* mine = board[fightMoves->at(i)->getFrom().getX() - 1][fightMoves->at(i)->getFrom().getY() - 1];
+			Soldier* other = board[fightMoves->at(i)->getTo().getX() - 1][fightMoves->at(i)->getTo().getY() - 1];
+			double prob = 0;
+			if (mine->fight(other) == 1) {
+				prob = 1; // 100 precent win
+			}
+			else if (mine->fight(other) == 2 || mine->fight(other) == 0) {
+				prob = 0; // 100 precent lose
+			}
+			else {
+				prob = winProbabilites[mine->getTypeNum()];
+			}
+			
+			if (prob > bestProb || (prob == bestProb && rand() % 2 == 0)) {
+				bestProb = prob;
+				bestMove = fightMoves->at(i);
+			}
+		}
+	}
+
+	if (bestMove == nullptr){
+		double bestScore = -DBL_MAX;
+		for (int i = 0; i < nonFightMoves->size(); i++) {
+			MyBoard potentialBoard = *this;
+			potentialBoard.makeMove(nonFightMoves->at(i)->getFrom().getX() - 1, nonFightMoves->at(i)->getFrom().getY() - 1,
+				nonFightMoves->at(i)->getTo().getX() - 1, nonFightMoves->at(i)->getTo().getY() - 1);
+			double score = potentialBoard.getScore(player,winProbabilites);
+			if (score > bestScore || (score == bestScore && rand() % 2 == 0)) {
+				bestScore = score;
+				bestMove = nonFightMoves->at(i);
+			}
+		}
+	}
+
+	Move* result = new MyMove(new MyPoint(bestMove->getFrom().getX(), bestMove->getFrom().getY()), new MyPoint(bestMove->getTo().getX(), bestMove->getTo().getY()));
+
+	fightMoves->clear();
+	nonFightMoves->clear();
+	delete[] winProbabilites;
+
+	return bestMove;
+	
+}
+
+double MyBoard::getScore(int player, double* winProbabilites) {
+	int opponent = player == 1 ? 2 : 1;
+	std::vector<Soldier*>* myPieces = getPieces(player);
+	std::vector<Soldier*>* opponentPieces = getPieces(opponent);
+	double score = 0;
+	for (int i = 0; i < myPieces->size() ; ++i) {
+		for (int j = 0; j < opponentPieces->size() ; ++j) {
+			Soldier* mine = myPieces->at(i);
+			Soldier* other = opponentPieces->at(j);
+			double fightWeight = 0;
+			if (mine->fight(other) == 1) fightWeight = 1; // 100 precent win
+			else if (mine->fight(other) == 2 || mine->fight(other) == 0) continue; // 100 precent lose
+			else {
+				fightWeight = winProbabilites[mine->getTypeNum()];
+			}
+			score = score + 1 / (double)mine->distance(other) * fightWeight;
+		}
+	}
+	myPieces->clear();
+	opponentPieces->clear();
+	return score;
+}
+
+double * MyBoard::getWinProbabilities(int player)
+{
+	int opponent = player == 1 ? 2 : 1;
+	double* probs = new double[3];
+	double opponentRocks = 0;
+	double opponentPapers = 0;
+	double opponentScissors = 0;
+
+	for (int i = 0; i < Constants::N; ++i) {
+		for (int j = 0; j < Constants::M; ++j) {
+			if (board[i][j] != nullptr && board[i][j]->getPlayer() == opponent) {
+				if (board[i][j]->getType() == 'R') opponentRocks++;
+				else if (board[i][j]->getType() == 'P') opponentPapers++;
+				else if (board[i][j]->getType() == 'S') opponentScissors++;
+			}
+		}
+	}
+
+	double common = Constants::R + Constants::P + Constants::S - opponentRocks - opponentPapers - opponentScissors;
+	double opponentRocksProp = (Constants::R - opponentRocks) / common;
+	double opponentPapersProp = (Constants::P - opponentPapers) / common;
+	double opponentScissorsProp = (Constants::S - opponentScissors) / common;
+
+	probs[0] = (0.5 * opponentRocksProp + opponentScissorsProp) / (1.5);
+	probs[1] = (0.5 * opponentPapersProp + opponentRocksProp) / (1.5);
+	probs[2] = (0.5 * opponentScissorsProp + opponentPapersProp) / (1.5);
+
+	return probs;
+}
+
+std::vector<Move*>* MyBoard::getAllFightMoves(int player) {
+	std::vector<Move*>* moves = new std::vector<Move*>();
+	for (int i = 0; i < Constants::N; ++i) {
+		for (int j = 0; j < Constants::M; ++j) {
+			if (board[i][j] != nullptr && board[i][j]->getPlayer() == player) {
+				if (canMakeMove(i, j, i + 1, j, player) && board[i+1][j] != nullptr) {
+					moves->push_back((Move*)new MyMove(new MyPoint(i+1, j + 1), new MyPoint(i + 1 + 1, j + 1)));
+				}
+				if (canMakeMove(i, j, i - 1, j, player) && board[i - 1][j] != nullptr) {
+					moves->push_back((Move*)new MyMove(new MyPoint(i + 1, j + 1), new MyPoint(i - 1 + 1, j + 1)));
+				}
+				if (canMakeMove(i, j, i , j + 1, player) && board[i][j + 1] != nullptr) {
+					moves->push_back((Move*)new MyMove(new MyPoint(i + 1, j + 1), new MyPoint(i + 1, j + 1 + 1)));
+				}
+				if (canMakeMove(i, j, i, j - 1, player) && board[i][j - 1] != nullptr) {
+					moves->push_back((Move*)new MyMove(new MyPoint(i + 1, j + 1), new MyPoint(i + 1, j + 1 - 1)));
+				}
+			}
+		}
+	}
+	return moves;
+}
+
+std::vector<Move*>* MyBoard::getAllNonFightMoves(int player)
+{
+	std::vector<Move*>* moves = new std::vector<Move*>();
+	for (int i = 0; i < Constants::N; ++i) {
+		for (int j = 0; j < Constants::M; ++j) {
+			if (board[i][j] != nullptr && board[i][j]->getPlayer() == player) {
+				if (canMakeMove(i, j, i + 1, j, player) && board[i + 1][j] == nullptr) {
+					moves->push_back((Move*)new MyMove(new MyPoint(i + 1, j + 1), new MyPoint(i + 1 + 1, j + 1)));
+				}
+				if (canMakeMove(i, j, i - 1, j, player) && board[i - 1][j] == nullptr) {
+					moves->push_back((Move*)new MyMove(new MyPoint(i + 1, j + 1), new MyPoint(i - 1 + 1, j + 1)));
+				}
+				if (canMakeMove(i, j, i, j + 1, player) && board[i][j + 1] == nullptr) {
+					moves->push_back((Move*)new MyMove(new MyPoint(i + 1, j + 1), new MyPoint(i + 1, j + 1 + 1)));
+				}
+				if (canMakeMove(i, j, i, j - 1, player) && board[i][j - 1] == nullptr) {
+					moves->push_back((Move*)new MyMove(new MyPoint(i + 1, j + 1), new MyPoint(i + 1, j + 1 - 1)));
+				}
+			}
+		}
+	}
+	return moves;
+}
+
+std::vector<Soldier*>* MyBoard::getPieces(int player)
+{
+	std::vector<Soldier*>* pieces = new std::vector<Soldier*>();
+	for (int i = 0; i < Constants::N; ++i) {
+		for (int j = 0; j < Constants::M; ++j) {
+			if (board[i][j] != nullptr && board[i][j]->getPlayer() == player) {
+				board[i][j]->setTempX(i);
+				board[i][j]->setTempY(j);
+				pieces->push_back(board[i][j]);
+			}
+		}
+	}
+	return pieces;
+}
+
+
 

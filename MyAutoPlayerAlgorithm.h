@@ -1,5 +1,5 @@
-#ifndef __MY_FILE_PLAYER_ALGORITHM_H_
-#define __MY_FILE_PLAYER_ALGORITHM_H_
+#ifndef __MY_AUTO_PLAYER_ALGORITHM_H_
+#define __MY_AUTO_PLAYER_ALGORITHM_H_
 
 #include <iostream>
 #include <fstream>
@@ -8,7 +8,7 @@
 #include <string>
 #include "MyPoint.h"
 #include "MyPiecePosition.h"
-#include "Board.h"
+#include "MyBoard.h"
 #include "FightInfo.h"
 #include "Move.h"
 #include "JokerChange.h"
@@ -18,15 +18,11 @@
 
 using namespace std;
 
-class MyFilePlayerAlgorithm : public PlayerAlgorithm{
-	ifstream* positionsFile = nullptr;
+class MyAutoPlayerAlgorithm : public PlayerAlgorithm {
 	int playerNum;
-	bool didJokerChange;
-	int lastJokerX;
-	int lastJokerY;
-	char lastJokerRep;
+	MyBoard* board;
 public:
-	
+
 	void getInitialPositions(int player, std::vector<unique_ptr<PiecePosition>>& vectorToFill);
 
 	void notifyOnInitialBoard(const Board & b, const std::vector<unique_ptr<FightInfo>>& fights);
@@ -35,11 +31,11 @@ public:
 
 	void notifyFightResult(const FightInfo & fightInfo);
 
-	unique_ptr<Move> getMove();
+	unique_ptr<Move> getMove(); 
 
 	unique_ptr<JokerChange> getJokerChange();
 
-	~MyFilePlayerAlgorithm();
+	~MyAutoPlayerAlgorithm();
 
 };
 

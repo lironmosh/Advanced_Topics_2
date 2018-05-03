@@ -130,6 +130,8 @@
     <ClInclude Include="Soldier.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MyAutoPlayerAlgorithm.cpp" />
+    <ClCompile Include="MyAutoPlayerAlgorithm.h" />
     <ClCompile Include="MyBoard.cpp" />
     <ClCompile Include="GameManager.cpp" />
     <ClCompile Include="MyFightInfo.cpp" />

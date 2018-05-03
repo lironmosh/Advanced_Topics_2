@@ -34,6 +34,7 @@ bool Soldier::isMovable() const {
 	0 - remove both soldiers from the board
 	1 - remove this soldier
 	2 - remove other soldier
+	3 - fight result is unknown
 */
 int Soldier::fight(Soldier* other)const {
 	if (type == other->type || type == 'B' || other->type == 'B')
@@ -45,5 +46,43 @@ int Soldier::fight(Soldier* other)const {
 		(type == 'S' && other->type == 'P'))
 		return 1;
 	
-	return 2;
+	if(other->type != 'U')
+		return 2;
+
+	return 3;
 }
+
+	int Soldier::getTypeNum() const
+	{
+		
+		if (type == 'R') return 0;
+		else if (type == 'P') return 1;
+		else if (type == 'S') return 2;
+		else if (type == 'B') return 3;
+		else if (type == 'F') return 4;
+	}
+
+	int Soldier::getTempX() const
+	{
+		return tempX;
+	}
+
+	int Soldier::getTempY() const
+	{
+		return tempY;
+	}
+
+	void Soldier::setTempX(int x)
+	{
+		tempX = x;
+	}
+
+	void Soldier::setTempY(int y)
+	{
+		tempY = y;
+	}
+
+	int Soldier::distance(Soldier * other) const
+	{
+		return abs(tempX - other->getTempX()) + abs(tempY - other->getTempY());
+	}

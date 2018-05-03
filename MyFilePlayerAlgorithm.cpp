@@ -61,12 +61,12 @@ void MyFilePlayerAlgorithm::notifyFightResult(const FightInfo& fightInfo) {
 unique_ptr<Move> MyFilePlayerAlgorithm::getMove() {
 	string file = "player" + to_string(playerNum) + ".rps_moves";
 	unique_ptr<Move> illigal((Move*)new MyMove(new MyPoint(*new int(-1), *new int(-1)), new MyPoint(*new int(-1), *new int(-1))));
-	ifstream positionsFile = ifstream(file);
-	if (!positionsFile.is_open()) {
+	if (positionsFile == nullptr) positionsFile = new  ifstream(file);
+	if (!positionsFile->is_open()) {
 		cout << "Usage: the following input file is required in the working directory: player1.rps_moves" << endl;
 		return illigal;
 	}
-	if (positionsFile.peek() == EOF) {
+	if (positionsFile->peek() == EOF) {
 		cout << "Usage: no move for player" + to_string(playerNum) << endl;
 		return illigal;
 	}
@@ -74,7 +74,7 @@ unique_ptr<Move> MyFilePlayerAlgorithm::getMove() {
 	regex move("[ ]*[[:digit:]]+[ ]+[[:digit:]]+[ ]+[[:digit:]]+[ ]+[[:digit:]]+[ ]*");
 	regex skip("[ ]*");
 	string line;
-	getline(positionsFile, line);
+	getline(*positionsFile, line);
 
 	int from_x;
 	int from_y;
@@ -98,16 +98,13 @@ unique_ptr<Move> MyFilePlayerAlgorithm::getMove() {
 		didJokerChange = false;
 	}
 	else if (regex_match(line, skip)) {
-		positionsFile.close();
-		nextMoveLine++;
+		positionsFile->close();
 		return getMove();
 	}
 	else {
 		// move parse failed
 		return illigal;
 	}
-	positionsFile.close();
-	nextMoveLine++;
 
 	return unique_ptr<Move>((Move*)new MyMove(new MyPoint(*new int(from_x), *new int(from_y)), new MyPoint(*new int(to_x), *new int(to_y))));
 }
@@ -123,5 +120,6 @@ unique_ptr<JokerChange> MyFilePlayerAlgorithm::getJokerChange() {
 
 MyFilePlayerAlgorithm::~MyFilePlayerAlgorithm()
 {
-
+	positionsFile->close();
+	delete positionsFile;
 }
